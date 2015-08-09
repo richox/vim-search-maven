@@ -15,7 +15,19 @@ if __name__ == "__main__":
     import json
 
     def select_candidate(candidates, pagesize=30):
-        pass
+        try:
+            assert len(candidates) > 0
+            vim.command("redraw!")
+            sys.stdout.writelines(map(lambda _: "candidates[%d]: %s" % _, enumerate(candidates[:pagesize])))
+            userinput = ""
+            userinput = vim.eval("input('select one candidate, [Enter] for next page: ', '')")
+            if userinput == "":
+                return pagesize + select_candidate(candidates[30:])
+            return int(userinput)
+        except:
+            raise KeyboardInterrupt("invalid input: " + userinput)
+        finally:
+            vim.command("redraw!")
 
     try:
         ## step-1: list groupid/artifactid by user query
@@ -26,27 +38,19 @@ if __name__ == "__main__":
             raise Exception(" no candidates found.")
 
         candidates = []
-        for index, doc in enumerate(content_data["response"]["docs"]):
+        candidates_menu = []
+        for doc in sorted(content_data["response"]["docs"], key=lambda _: _["g"] + "." + _["a"]):
             candidates.append({
                     "groupid":       doc["g"],
                     "artifactid":    doc["a"],
                     "latestversion": doc["latestVersion"],
             })
-        try:
-            npage = 0
-            n = 0
-            i = 0
-            while npage * pagesize < len(candidates):
-                for i in range(pagesize):
-                    sys.stdout.write("candidate [%d]: %s: %s (latestVersion: %s)\n" % (
-                            index,
-                            candidates[i]["groupid"],
-                            candidates[i]["artifactid"],
-                            candidates[i]["latestversion"]))
-            n = int(vim.eval("input('select one candidate, [n] for next page: ', '')"))
-            vim.command("redraw!")
-        except:
-            raise Exception("invalid input.")
+            if not candidates[-1]["artifactid"].startswith(query):
+                candidates.pop()
+                continue
+            candidates_menu.append("%s: %s\n" % (candidates[-1]["groupid"], candidates[-1]["artifactid"]))
+
+        n = select_candidate(candidates_menu)
         groupid = candidates[n]["groupid"]
         artifactid = candidates[n]["artifactid"]
 
@@ -54,20 +58,11 @@ if __name__ == "__main__":
         sys.stdout.write("fetching package versions of [%(groupid)s: %(artifactid)s] from search.maven.org...\n" % locals())
         query = 'g:"%(groupid)s" AND a:"%(artifactid)s"' % locals()
         content_data = json.load(urllib.urlopen("http://search.maven.org/solrsearch/select?rows=999&core=gav&q=" + urllib.quote(query)))
-        content_data["response"]["docs"].sort(reverse=1, key=lambda _: _["v"])
 
-        candidate_versions = []
-        for index, doc in enumerate(content_data["response"]["docs"]):
-            candidate_versions.append(doc["v"])
-            sys.stdout.write("candidate version [%d]: %s\n" % (index, candidate_versions[-1]))
-
-        try:
-            n = 0
-            n = int(vim.eval("input('select one candidate [0]: ', '')"))
-            vim.command("redraw!")
-        except:
-            raise Exception("invalid input.")
-        version = candidate_versions[n]
+        candidate_versions_menu = sorted(map(lambda _: "%(v)s\n" % _, content_data["response"]["docs"]), reverse=1)
+        n = select_candidate(candidate_versions_menu)
+        version = candidate_versions_menu[n]
+        version = version.strip()
 
         ## step-3
         output_code = ""
@@ -82,7 +77,10 @@ if __name__ == "__main__":
         sys.stdout.write(output_code)
         sys.stdout.write('vim: already store to register ["@].')
 
-    except Exception as e:
+    except KeyboardInterrupt, e:
+        vim.command("""echo "Interrupted: %s"\n""" % e.message)
+
+    except Exception, e:
         vim.command("redraw!")
         raise e
 endpython

@@ -6,7 +6,19 @@ if exists("g:loaded_search_maven") && g:loaded_search_maven
 endif
 let g:loaded_search_maven = 1
 
-function! search_maven#SearchMaven(query)
+"
+"
+" commands
+"
+"
+command! -nargs=1 SearchMaven :call s:SearchMaven(<f-args>)
+
+"
+"
+" functions
+"
+"
+function! s:SearchMaven(query)
 python << endpython
 if __name__ == "__main__":
     import sys

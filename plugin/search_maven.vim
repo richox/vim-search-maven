@@ -18,6 +18,8 @@ command! -nargs=1 SearchMaven :call s:SearchMaven(<f-args>)
 " functions
 "
 "
+python class UserInterrupt:pass
+
 function! s:SearchMaven(query)
 python << endpython
 if __name__ == "__main__":
@@ -27,27 +29,26 @@ if __name__ == "__main__":
     import json
 
     def select_candidate(candidates, pagesize=30):
+        userinput = ""
         try:
-            assert len(candidates) > 0
             vim.command("redraw!")
             sys.stdout.writelines(map(lambda _: "candidates[%d]: %s" % _, enumerate(candidates[:pagesize])))
-            userinput = ""
             userinput = vim.eval("input('select one candidate, [Enter] for next page: ', '')")
             if userinput == "":
                 return pagesize + select_candidate(candidates[30:])
             return int(userinput)
         except:
-            raise KeyboardInterrupt("invalid input: " + userinput)
+            if userinput != "":
+                raise KeyboardInterrupt("invalid input: " + userinput)
         finally:
             vim.command("redraw!")
+        return None
 
     try:
         ## step-1: list groupid/artifactid by user query
         sys.stdout.write("fetching package lists from search.maven.org...\n")
         query = vim.eval("a:query")
         content_data = json.load(urllib.urlopen("http://search.maven.org/solrsearch/select?rows=999&q=" + urllib.quote(query)))
-        if len(content_data["response"]["docs"]) < 1:
-            raise Exception(" no candidates found.")
 
         candidates = []
         candidates_menu = []
@@ -62,7 +63,12 @@ if __name__ == "__main__":
                 continue
             candidates_menu.append("%s: %s\n" % (candidates[-1]["groupid"], candidates[-1]["artifactid"]))
 
+        if len(candidates_menu) == 0:
+            vim.command("""echo "No candidates."\n""")
+            raise UserInterrupt()
         n = select_candidate(candidates_menu)
+        if n == None:
+            raise UserInterrupt()
         groupid = candidates[n]["groupid"]
         artifactid = candidates[n]["artifactid"]
 
@@ -72,7 +78,12 @@ if __name__ == "__main__":
         content_data = json.load(urllib.urlopen("http://search.maven.org/solrsearch/select?rows=999&core=gav&q=" + urllib.quote(query)))
 
         candidate_versions_menu = sorted(map(lambda _: "%(v)s\n" % _, content_data["response"]["docs"]), reverse=1)
+        if len(candidate_versions_menu) == 0:
+            vim.command("""echo "No candidate versions."\n""")
+            raise UserInterrupt()
         n = select_candidate(candidate_versions_menu)
+        if n == None:
+            raise UserInterrupt()
         version = candidate_versions_menu[n]
         version = version.strip()
 
@@ -87,10 +98,14 @@ if __name__ == "__main__":
 
         vim.command("let @@=pyeval('output_code')")
         sys.stdout.write(output_code)
-        sys.stdout.write('vim: already store to register ["@].')
+        sys.stdout.write('vim-javautil-search-maven: already store to register ["@].')
 
     except KeyboardInterrupt, e:
         vim.command("""echo "Interrupted: %s"\n""" % e.message)
+
+    except UserInterrupt, e:
+        vim.command("""echo "Interrupted."\n""")
+        pass
 
     except Exception, e:
         vim.command("redraw!")

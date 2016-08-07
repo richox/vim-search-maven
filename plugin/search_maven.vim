@@ -100,7 +100,7 @@ if __name__ == "__main__":
 
         vim.command("let @@=pyeval('output_code')")
         sys.stdout.write(output_code)
-        sys.stdout.write('vim-javautil-search-maven: already store to register ["@].')
+        sys.stdout.write('vim-javautil-search-maven: already store to register ["@].\n')
 
     except KeyboardInterrupt, e:
         vim.command("""echo "Interrupted: %s"\n""" % e.message)

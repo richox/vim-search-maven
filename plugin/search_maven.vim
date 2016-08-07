@@ -23,19 +23,21 @@ python class UserInterrupt:pass
 function! s:SearchMaven(query)
 python << endpython
 if __name__ == "__main__":
+    import socket
+    socket.setdefaulttimeout(15)
     import sys
     import vim
     import urllib
     import json
 
-    def select_candidate(candidates, pagesize=30):
+    def select_candidate(candidates, pagesize=50):
         userinput = ""
         try:
             vim.command("redraw!")
             sys.stdout.writelines(map(lambda _: "candidates[%d]: %s" % _, enumerate(candidates[:pagesize])))
             userinput = vim.eval("input('select one candidate, [Enter] for next page: ', '')")
             if userinput == "":
-                return pagesize + select_candidate(candidates[30:])
+                return pagesize + select_candidate(candidates[pagesize:])
             return int(userinput)
         except:
             if userinput != "":

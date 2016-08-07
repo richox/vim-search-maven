@@ -1,4 +1,4 @@
-vim-javautil-search-maven
+vim-search-maven
 =========================
 
 search maven dependencies from http://search.maven.org.
@@ -16,4 +16,4 @@ Installation
 
 Add to `.vimrc`:
 ``` vimL
-NeoBundle 'artur-shaik/vim-javacomplete2'
+Bundle 'richox/vim-search-maven'

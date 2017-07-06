@@ -68,7 +68,10 @@ if __name__ == "__main__":
         if len(candidates_menu) == 0:
             vim.command("""echo "No candidates."\n""")
             raise UserInterrupt()
-        n = select_candidate(candidates_menu)
+        elif len(candidates_menu) == 1:
+            n = 0
+        else:
+            n = select_candidate(candidates_menu)
         if n == None:
             raise UserInterrupt()
         groupid = candidates[n]["groupid"]
@@ -83,7 +86,10 @@ if __name__ == "__main__":
         if len(candidate_versions_menu) == 0:
             vim.command("""echo "No candidate versions."\n""")
             raise UserInterrupt()
-        n = select_candidate(candidate_versions_menu)
+        elif len(candidate_versions_menu) == 1:
+            n = 0
+        else:
+            n = select_candidate(candidate_versions_menu)
         if n == None:
             raise UserInterrupt()
         version = candidate_versions_menu[n]
